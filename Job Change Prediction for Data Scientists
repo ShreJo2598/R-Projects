@@ -1,0 +1,187 @@
+library(tidyverse)
+library(ggalluvial)
+library(ggfittext)
+library(janitor)
+library(naniar)
+library(scales)
+library(randomForest)
+library(missForest)
+library(caret)
+
+### city with most candidates Graph##
+df.graph %>% 
+  group_by(city_development_index) %>%
+  summarise(count = n()) %>% 
+  mutate(ratio = count / sum(count),
+         label = percent(ratio %>% round(2))) %>%
+  arrange(desc(ratio)) %>% 
+  head(10) %>% 
+  ggplot(aes(x = reorder(city_development_index,-count), y = count, fill= target)) + 
+  geom_bar(stat = "identity", fill = "black", color="black") +
+  geom_label(aes(label = label), fill="#FFF9F5", colour = "black",
+             fontface = "italic", vjust = 0.5) + labs(x = "City Codes", y = "Candidates count from the city")
+
+## Relationship between in top 10 Cities and Job search  ##
+df.graph%>% 
+  group_by(city,target) %>%
+  summarise(count = n())%>%
+  mutate(ratio = count / sum(count),
+         label = percent(ratio %>% round(2))) %>% 
+  filter(city %in% c("city_103","city_21","city_16","city_114",
+                     "city_160","city_136","city_67",
+                     "city_75","city_102","city_104")) %>% 
+  ggplot(aes(x=reorder(city,-count),
+             y=ratio,
+             fill=target)) + 
+  geom_bar(stat='identity', color = 'black')+
+  scale_fill_manual(values = c('skyblue', 'orange'),
+                    labels = c("Not searching for a new job", 
+                               "Searching for a new job")) +
+  theme(axis.text.x = element_text(vjust = 5, 
+                                   hjust = 0.5, 
+                                   size = 12)) +
+  scale_y_continuous(labels = percent) + labs(x = " city code", y ="Candidates looking for job")
+
+## Relationshio between all the cities and job search ##
+
+df.graph%>% 
+  group_by(city,target) %>%
+  summarise(count = n())%>%
+  mutate(ratio = count / sum(count),
+         label = percent(ratio %>% round(2))) %>% 
+  filter(city %in% c("city_103","city_21","city_16","city_114",
+                     "city_160","city_136","city_67",
+                     "city_75","city_102","city_104")) %>% 
+  ggplot(aes(x=reorder(city,-count),
+             y=ratio,
+             fill=target)) + 
+  geom_bar(stat='identity', color = 'black')+
+  scale_fill_manual(values = c('skyblue', 'orange'),
+                    labels = c("Not searching for a new job", 
+                               "Searching for a new job")) +
+  theme(axis.text.x = element_text(vjust = 5, 
+                                   hjust = 0.5, 
+                                   size = 12)) +
+  scale_y_continuous(labels = percent) + labs(x = " city code", y ="Candidates looking for job")
+
+
+#plot 1##
+g <- ggplot(no.na, aes(company_type))
+g + geom_bar(fill='Blue')
+g + geom_bar(fill='Blue') + labs(x = "Type of Companies", y = "No of companies")
+
+##Plot 2###
+g <- ggplot(no.na, aes(company_type))
+g + geom_bar(fill='Blue')
+g + geom_bar(fill='Blue') + labs(x = "Type of Companies", y = "No of companies")
+###########
+
+ht<-na.omit(aug_test_3_)
+ht <- data.frame(ht)
+ht
+
+no.na<-na.omit(aug_train)
+h <- data.frame(no.na)
+h
+typeof(h$gender)
+#### CONVERTING INTO FACTORS ##
+h$gender <- as.factor(h$gender)
+h$relevent_experience <- as.factor(h$relevent_experience)
+h$enrolled_university <- as.factor(h$enrolled_university)
+h$education_level <- as.factor(h$education_level)
+h$major_discipline <- as.factor(h$major_discipline)
+h$company_type <- as.factor(h$company_type)
+h$target <- as.factor(h$target)
+h$city<-as.factor(h$city)
+
+
+
+### Testing##
+
+#### CONVERTING INTO FACTORS ##
+ht$gender <- as.factor(ht$gender)
+ht$city <- as.factor(ht$city)
+ht$relevent_experience <- as.factor(ht$relevent_experience)
+ht$enrolled_university <- as.factor(ht$enrolled_university)
+ht$education_level <- as.factor(ht$education_level)
+ht$major_discipline <- as.factor(ht$major_discipline)
+ht$company_type <- as.factor(ht$company_type)
+
+
+
+class(ht$education_level)
+
+library(rpart)
+
+fit <- rpart(target ~ ., # formula, all predictors will be considered in splitting
+             data=h, # dataframe used
+             method="class",  # treat churn as a categorical variable, default
+             control=rpart.control(xval=5, minsplit=1), # xval: num of cross validation for gini estimation # minsplit=1000: stop splitting if node has 1000 or fewer obs
+             parms=list(split="gini"))  # criterial for splitting: gini default, entropy if set parms=list(split="information")
+
+fit  # display basic results
+
+
+# plot tree using built-in function
+plot(fit, uniform=TRUE,  # space out the tree evenly
+     branch=0.5,         # make elbow type branches
+     main="Classification Tree for Churn Prediction",   # title
+     margin=0.1)         # leave space so it all fits
+text(fit,  use.n=TRUE,   # show numbers for each class
+     all=TRUE,           # show data for internal nodes as well
+     fancy=FALSE,            # draw ovals and boxes
+     pretty=TRUE,           # show split details
+     cex=0.8)            # compress fonts to 80%
+
+
+# plot a prettier tree using rpart.plot
+# Important! Comment the following line after installing rpart.plot
+#install.packages('rpart.plot')
+library(rpart.plot)
+prp(fit, type = 1, extra = 1, under = TRUE, split.font = 1, varlen = -10, main="Classification Tree for Churn Prediction")    
+# type can be any values from 0, 1, 2, ...,5, corresponding to different formats
+# extra can be any value from 0, 1, 2,..., 11, corresponding to different texts to be displayed
+rpart.plot(fit, type = 1, extra = 1, main="Classification Tree for Churn Prediction")  
+rpart.plot(fit, type = 1, extra = 4, main="Classification Tree for Churn Prediction")  # show proportion of classes at each node
+rpart.plot(fit, type = 3, extra = 5, main="Classification Tree for Churn Prediction")  # show proportion of classes at each node
+
+
+# extract the vector of predicted class for each observation in chur.train
+h.pred <- predict(fit, h, type="class")
+# extract the actual class of each observation in chur.train
+h.actual <- h$target
+
+# now build the "confusion matrix"
+# which is the contingency matrix of predicted vs actual
+# use this order: predicted then actual
+confusion.matrix <- table(h.pred, h.actual)  
+confusion.matrix
+
+pt <- prop.table(confusion.matrix)  
+pt
+#accuracy
+pt[1,1] + pt[2,2]   # 0.7365737
+
+
+# extract the vector of predicted class for each observation in chur.train
+ht.pred_new <- predict(fit, ht, type="class")
+ht$ht.pred_new<-ht.pred_new
+# extract the actual class of each observation in chur.train
+
+# now build the "confusion matrix"
+# which is the contingency matrix of predicted vs actual
+# use this order: predicted then actual
+confusion.matrix <- table(h.pred, h.actual)  
+confusion.matrix
+
+pt <- prop.table(confusion.matrix)  
+pt
+#accuracy
+pt[1,1] + pt[2,2]   # 0.7365737
+
+
+
+
+
+
+
